@@ -36,6 +36,9 @@ assign running = ~ui_in[0];
 wire randomize;
 assign randomize = ui_in[1];
 
+wire randomize_colors;
+assign randomize_colors = ui_in[2];
+
 // TinyVGA PMOD
 assign uo_out = {hsync, B[0], G[0], R[0], vsync, B[1], G[1], R[1]};
 
@@ -68,9 +71,12 @@ wire [logWIDTH+logHEIGHT-1:0] cell_index;
 assign cell_index = (cell_y_disp << logWIDTH) | cell_x_disp;
 
 // generate RGB signals
-assign R = (frame_active) ? board_state[cell_index] & 2'b10 : 3;
-assign G = (frame_active) ? board_state[cell_index] & 2'b01 + 1: 3;
-assign B = (frame_active) ? board_state[cell_index] + 2'b10: 3;
+wire [5:0] disp_color;
+assign disp_color = (frame_active) ? palette[board_state[cell_index]] : 6'b111111;
+
+assign R = disp_color[5:4];
+assign G = disp_color[3:2];
+assign B = disp_color[1:0];
   
 // clock
 localparam CLOCK_FREQ = 24000000;
@@ -82,7 +88,7 @@ assign boot_reset = ~rst_n;
 
 // ----------------- SIMULATION PARAMS -------------------------
 
-localparam logWIDTH = 6, logHEIGHT = 6;         // 64x32 board
+localparam logWIDTH = 6, logHEIGHT = 6;         // 64x64 board
 localparam UPDATE_INTERVAL = CLOCK_FREQ / 10;   // 5 Hz simulation update
 
 localparam WIDTH = 2 ** logWIDTH;
@@ -144,8 +150,40 @@ always @(posedge clk) begin
   end
 end
 
+// ----------------- COLOR PALETTE (random RGB per state) --------------------
+reg [5:0] palette [0:2];   // {R[1:0], G[1:0], B[1:0]} per state
+reg [1:0] pal_index;
+reg pal_filling;
+reg randomize_colors_prev;
 
-// ----------------- ACTION: RANDOMIZE SIMULATION STATE --------------------
+always @(posedge clk) begin
+  if (boot_reset) begin
+    randomize_colors_prev <= 1'b0;
+    pal_filling <= 1'b0;
+    pal_index   <= 2'b00;
+    // sane defaults so it's not black on power-up
+    palette[0] <= 6'b110000; // rock   -> reddish
+    palette[1] <= 6'b001100; // paper  -> greenish
+    palette[2] <= 6'b000011; // sci    -> blueish
+  end else begin
+    randomize_colors_prev <= randomize_colors;
+
+    if (randomize_colors && !randomize_colors_prev && !pal_filling) begin
+      pal_filling <= 1'b1;
+      pal_index   <= 2'b00;
+    end else if (pal_filling) begin
+      // LFSR shifts every cycle, so each of these 3 reads is a fresh value
+      palette[pal_index] <= {lfsr_reg[5:4], lfsr_reg[3:2], lfsr_reg[1:0]};
+      if (pal_index == 2'd2) begin
+        pal_filling <= 1'b0;
+      end else begin
+        pal_index <= pal_index + 1'b1;
+      end
+    end
+  end
+end
+
+// ----------------- ACTION: RANDOMIZE SIMULATION STATE (AND COLORS)--------------------
 
 reg [logWIDTH+logHEIGHT-1:0] index2;
 
