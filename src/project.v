@@ -1,5 +1,5 @@
 /*
- * Modified Ciro Cattuto Tinytapeout Game of Life VGA exemple
+ * Copyright (c) 2024 Ciro Cattuto
  * based on the VGA examples by Uri Shaked
  * and on tt07-conway-term (https://github.com/ccattuto/tt07-conway-term)
  * SPDX-License-Identifier: Apache-2.0
@@ -7,7 +7,7 @@
 
 `default_nettype none
 
-module tt_um_vga_ca(
+module tt_um_vga_example(
   input  wire [7:0] ui_in,    // Dedicated inputs
   output wire [7:0] uo_out,   // Dedicated outputs
   input  wire [7:0] uio_in,   // IOs: Input path
@@ -61,13 +61,16 @@ wire frame_active;
 assign frame_active = (pix_x <= 640 && pix_y <= 480) ? 1 : 0;
 
 // compute index into board state
-wire [10:0] cell_index;
-assign cell_index = (pix_y[9:2] << 7) | pix_x[9:2];
+wire [logWIDTH-1:0]  cell_x_disp = pix_x[2 +: logWIDTH];
+wire [logHEIGHT-1:0] cell_y_disp = pix_y[2 +: logHEIGHT];
+
+wire [logWIDTH+logHEIGHT-1:0] cell_index;
+assign cell_index = (cell_y_disp << logWIDTH) | cell_x_disp;
 
 // generate RGB signals
 assign R = (frame_active) ? board_state[cell_index] & 2'b10 : 3;
-assign G = (frame_active) ? board_state[cell_index] & 2'b11 : 3;
-assign B = (frame_active) ? board_state[cell_index] & 2'b01 : 3;
+assign G = (frame_active) ? board_state[cell_index] & 2'b01 + 1: 3;
+assign B = (frame_active) ? board_state[cell_index] + 2'b10: 3;
   
 // clock
 localparam CLOCK_FREQ = 24000000;
@@ -79,7 +82,7 @@ assign boot_reset = ~rst_n;
 
 // ----------------- SIMULATION PARAMS -------------------------
 
-localparam logWIDTH = 7, logHEIGHT = 7;         // 64x32 board
+localparam logWIDTH = 6, logHEIGHT = 6;         // 64x32 board
 localparam UPDATE_INTERVAL = CLOCK_FREQ / 10;   // 5 Hz simulation update
 
 localparam WIDTH = 2 ** logWIDTH;
