@@ -393,7 +393,7 @@ assign rng = lfsr_reg[0] + lfsr_reg[1]; // Output the LSB of the LFSR
 always @(posedge clk) begin
   if (boot_reset) begin
     // Set to a non-zero seed value when reset
-    lfsr_reg <= 16'b0001; // Non-zero seed
+    lfsr_reg <= 16'b0010; // Non-zero seed
   end else begin
     // Shift left by one, then bring in the new feedback bit
     lfsr_reg <= {lfsr_reg[14:0], feedback};
