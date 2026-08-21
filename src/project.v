@@ -88,7 +88,7 @@ assign boot_reset = ~rst_n;
 
 // ----------------- SIMULATION PARAMS -------------------------
 
-localparam logWIDTH = 3, logHEIGHT = 3;         // 64x64 board
+localparam logWIDTH = 2, logHEIGHT = 2;         // 64x64 board
 localparam UPDATE_INTERVAL = CLOCK_FREQ / 10;   // 5 Hz simulation update
 
 localparam WIDTH = 2 ** logWIDTH;
